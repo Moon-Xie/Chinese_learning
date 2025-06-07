@@ -20,12 +20,16 @@ const connectDB= async() => {
 
 const createTables = async() =>{
 
+    // UUID generation function
+    const enableUuidExtension = `CREATE EXTENSION IF NOT EXISTS "pgcrypto";`;
+    await pool.query(enableUuidExtension);
+
     const dropTablesIfExist = /*sql*/ `
         DROP TABLE IF EXISTS users
     `
     await pool.query(dropTablesIfExist)
 
-    console.log('Creating products table...');
+    console.log('Finished runing drop tables qurey.');
 
     //Create users
     console.log('Creating users table...');

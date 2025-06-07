@@ -12,7 +12,10 @@ const port = process.env.PORT || 3000
 const {connectDB, createTables} = require('./db.js')
 
 const init = async() => {
+    //connect to database
     await connectDB();
+
+    //create tables in database
     await createTables();
 
     app.listen((port, () => console.log(`app is listening on Port ${port}`)))
