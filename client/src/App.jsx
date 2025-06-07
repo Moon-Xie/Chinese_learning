@@ -1,34 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import React, { useState } from 'react'
+import LevelSelector from './components/LevelSelector'
+import StoryList from './components/StoryList'
+import ReadingMode from './components/ReadingMode'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [selectedLevel, setSelectedLevel] = useState(null)
+  const [selectedStory, setSelectedStory] = useState(null)
+
+  const handleLevelSelect = (level) => {
+    setSelectedLevel(level)
+    setSelectedStory(null)
+  }
+
+  const handleStorySelect = (story) => {
+    setSelectedStory(story)
+  }
+
+  const handleExitReading = () => {
+    setSelectedStory(null)
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="app">
+      {!selectedLevel && <LevelSelector onLevelSelect={handleLevelSelect} />}
+      {selectedLevel && !selectedStory && (
+        <StoryList
+          selectedLevel={selectedLevel}
+          onStorySelect={handleStorySelect}
+        />
+      )}
+      {selectedStory && (
+        <ReadingMode
+          story={selectedStory}
+          onExit={handleExitReading}
+        />
+      )}
+    </div>
   )
 }
 
