@@ -4,10 +4,8 @@ require('dotenv').config()
 //Pool provides better and faster access to connect to database
 const { Pool } = require('pg');
 const pool = new Pool({
-    user: 'Moon',
-    host:'localhost',
-    database: process.env.DATABASE_URL,
-    port: process.env.PORT,
+    connectionString: process.env.DATABASE_URL,
+    ssl: false,
 });
 
 const connectDB= async() => {
@@ -20,12 +18,36 @@ const connectDB= async() => {
     }
 }
 
-// const createTables = async() =>{
+const createTables = async() =>{
 
-// }
+    const dropTablesIfExist = /*sql*/ `
+        DROP TABLE IF EXISTS users
+    `
+    await pool.query(dropTablesIfExist)
 
-module.exports = (
+    console.log('Creating products table...');
+
+    //Create users
+    console.log('Creating users table...');
+    const createUsersTable = /*sql*/`
+    CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        is_admin BOOLEAN DEFAULT FALSE,
+        mailing_address TEXT,
+        phone VARCHAR(20),
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+    );
+    `;
+    await pool.query(createUsersTable);
+}
+
+module.exports = {
     // query: (text, params) => pool.query(text, params),
     pool,
-    connectDB
-)
+    connectDB,
+    createTables
+}

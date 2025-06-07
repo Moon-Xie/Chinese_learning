@@ -9,10 +9,11 @@ const app = express()
 const port = process.env.PORT || 3000
 
 //import from db.js
-const {connectDB} = require('./db.js')
+const {connectDB, createTables} = require('./db.js')
 
 const init = async() => {
-    // await connectDB();
+    await connectDB();
+    await createTables();
 
     app.listen((port, () => console.log(`app is listening on Port ${port}`)))
 }
