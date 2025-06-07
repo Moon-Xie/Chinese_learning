@@ -1,55 +1,155 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './ReadingMode.css';
+import catStory from '../stories/catStory.json';
 
-// Dummy story data
+const wordsInStory = catStory.content.split(/\s+/);
+
+// Helper to find the nth occurrence of a word
+function findNthWordIndex(words, target, n = 1) {
+  let count = 0;
+  for (let i = 0; i < words.length; i++) {
+    if (words[i].replace(/[.?!,]/g, '') === target) {
+      count++;
+      if (count === n) return i;
+    }
+  }
+  return -1;
+}
+
+// Enhanced dummy story data with Chinese translations and HSK level-appropriate words
 const dummyStory = {
-  title: 'The Little Cat',
-  content: 'Once upon a time, there was a little cat. The cat loved to play in the garden. One day, it saw a beautiful butterfly. The cat tried to catch the butterfly, but it flew away. The cat was sad, but then it found a ball of yarn. The cat played with the yarn all day long.',
+  title: catStory.title,
+  content: catStory.content,
+  chineseContent: catStory.chineseContent,
   quizPoints: [
-    { position: 3, options: ['猫', '狗', '鸟'], correct: '猫' },
-    { position: 6, options: ['花园', '房子', '学校'], correct: '花园' },
-    { position: 9, options: ['蝴蝶', '蜜蜂', '蚂蚁'], correct: '蝴蝶' },
+    {
+      position: findNthWordIndex(wordsInStory, 'cat', 1) + 1, // 1-based
+      english: 'cat',
+      options: ['猫', '狗', '鸟'],
+      correct: '猫',
+      context: 'Once upon a time, there was a little ___.'
+    },
+    {
+      position: findNthWordIndex(wordsInStory, 'garden', 1) + 1, // 1-based
+      english: 'garden',
+      options: ['花园', '房子', '学校'],
+      correct: '花园',
+      context: 'The cat loved to play in the ___.'
+    },
+    {
+      position: findNthWordIndex(wordsInStory, 'butterfly', 1) + 1, // 1-based
+      english: 'butterfly',
+      options: ['蝴蝶', '蜜蜂', '蚂蚁'],
+      correct: '蝴蝶',
+      context: 'It saw a beautiful ___.'
+    },
   ]
 };
 
 const ReadingMode = ({ story, onExit }) => {
-  const [displayedText, setDisplayedText] = useState('');
-  const [currentPosition, setCurrentPosition] = useState(0);
-  const [showQuiz, setShowQuiz] = useState(false);
+  const words = dummyStory.content.split(' ');
+  // Calculate the start and end character indices for each word
+  const wordCharRanges = useRef([]);
+  if (wordCharRanges.current.length === 0) {
+    let idx = 0;
+    for (let i = 0; i < words.length; i++) {
+      const start = idx;
+      const end = idx + words[i].length;
+      wordCharRanges.current.push({ start, end });
+      idx = end + 1; // +1 for the space
+    }
+  }
+
+  const [charIndex, setCharIndex] = useState(0);
   const [currentQuiz, setCurrentQuiz] = useState(null);
+  const [quizWordIdx, setQuizWordIdx] = useState(null);
   const [goldCoins, setGoldCoins] = useState(0);
   const [isTyping, setIsTyping] = useState(true);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [isCorrect, setIsCorrect] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState('');
 
+  // Find the next quiz point
   useEffect(() => {
     if (!isTyping) return;
-
-    const text = dummyStory.content;
-    const typingSpeed = 50; // milliseconds per character
-
-    if (currentPosition < text.length) {
+    // Find if the next word is a quiz word and if we've reached its end
+    for (let i = 0; i < dummyStory.quizPoints.length; i++) {
+      const quiz = dummyStory.quizPoints[i];
+      const wordIdx = quiz.position - 1;
+      const range = wordCharRanges.current[wordIdx];
+      if (range && charIndex === range.end) {
+        setIsTyping(false);
+        setCurrentQuiz(quiz);
+        setQuizWordIdx(wordIdx);
+        return;
+      }
+    }
+    if (charIndex < dummyStory.content.length) {
       const timer = setTimeout(() => {
-        setDisplayedText(text.slice(0, currentPosition + 1));
-        setCurrentPosition(currentPosition + 1);
-
-        // Check if we should show a quiz
-        const quizPoint = dummyStory.quizPoints.find(q => q.position === currentPosition + 1);
-        if (quizPoint) {
-          setIsTyping(false);
-          setShowQuiz(true);
-          setCurrentQuiz(quizPoint);
-        }
-      }, typingSpeed);
-
+        setCharIndex((prev) => prev + 1);
+      }, 30);
       return () => clearTimeout(timer);
     }
-  }, [currentPosition, isTyping]);
+  }, [charIndex, isTyping]);
 
   const handleQuizAnswer = (answer) => {
-    if (answer === currentQuiz.correct) {
-      setGoldCoins(prev => prev + 1);
+    setSelectedAnswer(answer);
+    const correct = answer === currentQuiz?.correct;
+    setIsCorrect(correct);
+    setShowFeedback(true);
+    if (correct) {
+      setGoldCoins((prev) => prev + 1);
     }
-    setShowQuiz(false);
-    setIsTyping(true);
+    setTimeout(() => {
+      setShowFeedback(false);
+      setCurrentQuiz(null);
+      setSelectedAnswer('');
+      setIsTyping(true);
+      // Move charIndex past the quiz word and the following space
+      const range = wordCharRanges.current[quizWordIdx];
+      setCharIndex(range.end + 1);
+      setQuizWordIdx(null);
+    }, 1200);
+  };
+
+  // Render the story up to charIndex, replacing the quiz word with a dropdown if needed
+  const renderTextWithQuiz = () => {
+    if (currentQuiz && quizWordIdx !== null) {
+      // Render up to the start of the quiz word
+      const before = dummyStory.content.slice(0, wordCharRanges.current[quizWordIdx].start);
+      // Render the dropdown in place of the quiz word
+      return (
+        <>
+          <span>{before}</span>
+          <span className="quiz-word-container">
+            <select
+              className={`quiz-select ${showFeedback ? (selectedAnswer === currentQuiz.correct ? 'correct' : 'incorrect') : ''}`}
+              value={selectedAnswer}
+              onChange={(e) => handleQuizAnswer(e.target.value)}
+              disabled={showFeedback}
+            >
+              <option value="">{currentQuiz.english}</option>
+              {currentQuiz.options.map((option, i) => (
+                <option key={i} value={option}>{option}</option>
+              ))}
+            </select>
+            {showFeedback && (
+              <span className={`feedback ${isCorrect ? 'correct' : 'incorrect'}`}>
+                {isCorrect ? '✓' : '✗'}
+              </span>
+            )}
+          </span>{' '}
+        </>
+      );
+    } else {
+      // Normal typing animation
+      return (
+        <>
+          {dummyStory.content.slice(0, charIndex)}
+          <span className="cursor">|</span>
+        </>
+      );
+    }
   };
 
   return (
@@ -61,33 +161,12 @@ const ReadingMode = ({ story, onExit }) => {
           <span className="gold-count">{goldCoins}</span>
         </div>
       </div>
-
       <div className="story-container">
         <h2>{dummyStory.title}</h2>
         <div className="story-content">
-          {displayedText}
-          <span className="cursor">|</span>
+          {renderTextWithQuiz()}
         </div>
       </div>
-
-      {showQuiz && currentQuiz && (
-        <div className="quiz-overlay">
-          <div className="quiz-container">
-            <h3>Choose the correct Chinese word:</h3>
-            <div className="quiz-options">
-              {currentQuiz.options.map((option, index) => (
-                <button
-                  key={index}
-                  className="quiz-option"
-                  onClick={() => handleQuizAnswer(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
