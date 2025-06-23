@@ -56,10 +56,10 @@ export default function signUp () {
                 <form onSubmit={handleSubmit}>
                     {/*  input boxes */}
                     <div className='formGroup'>
-                        Email: <input value={email} onChange={(e) => setEmail(e.target.value)} required/>
+                        Username: <input value={username} onChange={(e) => setUsername(e.target.value)} required/>
                     </div>
                     <div className='formGroup'>
-                        Username: <input value={username} onChange={(e) => setUsername(e.target.value)} required/>
+                        Email: <input value={email} onChange={(e) => setEmail(e.target.value)} required/>
                     </div>
                     <div className='formGroup'>
                         Password: <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required/>
