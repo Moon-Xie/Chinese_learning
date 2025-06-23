@@ -8,6 +8,16 @@ const pool = new Pool({
     ssl: false,
 });
 
+//generate unique id
+const uuid = require('uuid');
+
+//hash password
+const bcrypt = require('bcrypt')
+
+//jwt
+const jwt = require('jsonwebtoken')
+const JWT = process.env.JWT || 'shhh'
+
 const connectDB= async() => {
     try {
         console.log('Connecting to database...')
@@ -40,8 +50,6 @@ const createTables = async() =>{
         email VARCHAR(100) UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         is_admin BOOLEAN DEFAULT FALSE,
-        mailing_address TEXT,
-        phone VARCHAR(20),
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
     );
@@ -49,9 +57,50 @@ const createTables = async() =>{
     await pool.query(createUsersTable);
 }
 
+//creste user - Register
+const createUser = async({username, email, password_hash}) => {
+    const SQL = /*sql*/ `
+        INSERT INTO users(username, email, password_hash) 
+        VALUES ($1, $2, $3)
+        RETURNING *
+    `;
+    const response = await pool.query(SQL [
+        username,
+        email,
+        await bcrypt.hash(password_hash, 5)
+    ]);
+    const user = response.rows[0]
+
+    //generate user token by jsonwebtoken
+    const token = jwt.sign({id: user.id}, JWT, {algorithm:'HS256'})
+    return(user, token)
+}
+
+//get user by username
+const getUserByUsername = async({username}) => {
+    const SQL = /*sql*/ `
+        SELECT * FROM users WHERE username = $1
+    `
+    const response = await pool.query(SQL, [username])
+    return response.rows[0]
+}
+
+//get user by email
+const getUserByEmail = async({email}) => {
+    const SQL = /*sql*/ `
+        SELECT * FROM users WHERE email = $1
+    `
+    const response = await pool.query(SQL, [email])
+    return response.rows[0]
+}
+
+
 module.exports = {
     // query: (text, params) => pool.query(text, params),
     pool,
     connectDB,
-    createTables
+    createTables,
+    createUser,
+    getUserByUsername,
+    getUserByEmail
 }
