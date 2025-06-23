@@ -11,8 +11,16 @@ const port = process.env.PORT || 3000
 //import from db.js
 const {connectDB, createTables} = require('./db.js')
 
+//app router
+const router = require('./api.js')
+app.use('/api', router)
+
+
 const init = async() => {
+    //connect to database
     await connectDB();
+
+    //create tables in database
     await createTables();
 
     app.listen((port, () => console.log(`app is listening on Port ${port}`)))
