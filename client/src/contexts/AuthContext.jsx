@@ -11,14 +11,28 @@ import { auth, db } from '../firebase';
 
 const AuthContext = createContext({
   currentUser: null,
-  signup: () => Promise.resolve(),
-  login: () => Promise.resolve(),
+  signup: (email, password, username) => Promise.resolve(),
+  login: (email, password) => Promise.resolve(),
   logout: () => Promise.resolve(),
-  getUserData: () => Promise.resolve(null),
 });
 
 export const useAuth = () => {
   return useContext(AuthContext);
+};
+
+const createUserProfile = (user, username) => {
+  return setDoc(doc(db, 'users', user.uid), {
+    uid: user.uid,
+    email: user.email,
+    username: username,
+    createdAt: new Date(),
+    isAdmin: false,
+    learningProgress: {
+      currentLevel: 1,
+      completedLessons: [],
+      vocabularyMastered: []
+    }
+  });
 };
 
 export const AuthProvider = ({ children }) => {
@@ -33,18 +47,7 @@ export const AuthProvider = ({ children }) => {
       displayName: username
     });
 
-    return setDoc(doc(db, 'users', user.uid), {
-      uid: user.uid,
-      email: email,
-      username: username,
-      createdAt: new Date(),
-      isAdmin: false,
-      learningProgress: {
-        currentLevel: 1,
-        completedLessons: [],
-        vocabularyMastered: []
-      }
-    });
+    return createUserProfile(user, username);
   };
 
   const login = (email, password) => {
@@ -63,7 +66,15 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userData = await getUserData(user.uid);
+        let userData = await getUserData(user.uid);
+
+        if (!userData) {
+          console.log(`User document for ${user.uid} not found. Backfilling profile.`);
+          const username = user.displayName || (user.email ? user.email.split('@')[0] : 'New User');
+          await createUserProfile(user, username);
+          userData = await getUserData(user.uid);
+        }
+
         setCurrentUser({ ...user, ...userData });
       } else {
         setCurrentUser(null);
