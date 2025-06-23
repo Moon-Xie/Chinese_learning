@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, Link } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LevelSelector from './components/LevelSelector'
@@ -8,12 +8,12 @@ import Navbar from './components/Navbar'
 import HomePage from './components/Home'
 import Signup from './components/Signup'
 import Login from './components/Login'
+import SplashPage from './components/SplashPage'
 import './App.css'
 
 function AppContent() {
   const [selectedLevel, setSelectedLevel] = useState(null)
   const [selectedStory, setSelectedStory] = useState(null)
-  const [welcomeToggle, setWelcomeToggle] = useState(false)
   const { currentUser } = useAuth()
   const navigate = useNavigate();
 
@@ -30,14 +30,6 @@ function AppContent() {
     setSelectedStory(null)
   }
 
-  setTimeout(() => {
-    setWelcomeToggle(true)
-  }, 10000000);
-
-  const handleWelcomeToggle = () => {
-    setWelcomeToggle(true)
-  }
-
   return (
     <>
       <Navbar />
@@ -49,32 +41,7 @@ function AppContent() {
       </Routes>
 
       <div className="app">
-        {!currentUser && !welcomeToggle && (
-          <div>
-            <h1>Welcome to your language learning trip!</h1>
-            <Link to='/signup'>
-              <button>Sign Up</button>
-            </Link>
-            <Link to='/login'>
-              <button>Login</button>
-            </Link>
-            <button onClick={handleWelcomeToggle}>Let's give it a try</button>
-          </div>
-        )}
-
-        {!currentUser && welcomeToggle && (
-          <div>
-            <h2>Please sign up or login to continue</h2>
-            <Link to='/signup'>
-              <button>Sign Up</button>
-            </Link>
-            <Link to='/login'>
-              <button>Login</button>
-            </Link>
-          </div>
-        )}
-
-        {currentUser && (
+        {currentUser ? (
           <div>
             {!selectedLevel && <LevelSelector onLevelSelect={handleLevelSelect} />}
             {selectedLevel && !selectedStory && (
@@ -90,17 +57,36 @@ function AppContent() {
               />
             )}
           </div>
+        ) : (
+          <div>
+            <h2>Please sign up or login to continue</h2>
+            <Link to='/signup'>
+              <button>Sign Up</button>
+            </Link>
+            <Link to='/login'>
+              <button>Login</button>
+            </Link>
+          </div>
         )}
-
       </div>
     </>
   )
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <AuthProvider>
-      <AppContent />
+      {showSplash ? <SplashPage /> : <AppContent />}
     </AuthProvider>
   )
 }
